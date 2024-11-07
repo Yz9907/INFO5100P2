@@ -151,7 +151,7 @@
         //referenced the site linked for help on the interactivity of this map. CITE: https://d3-graph-gallery.com/graph/choropleth_hover_effect.html
         let mouseOver = function(event, d) {
             d3.selectAll(".country")
-                .style("opacity", .3); //making every other country look faded in contrast to selected country
+                .style("opacity", .9); //making every other country look faded in contrast to selected country
             d3.select(this)
                 .style("opacity", 1)
                 .style("stroke", "black"); //when hovering over country, this is the stroke color
@@ -176,8 +176,15 @@
 
         function mapZoomed({ transform }) {
             viewport.attr("transform", transform.toString() );
+            
             viewport.selectAll(".country")
-                    .style("stroke-width", .5 / transform.k);
+                //.attr("visibility", (transform.k > 3) ? "visible" : "hidden") FROM LECTURE 10/21 - will be useful for hiding menu after country is no longer selected
+                .style("stroke-width", .5 / transform.k);
+
+            if (transform.k <= 1) {
+                viewport.selectAll(".country").attr("visibility", "visible");
+            }
+            
             
         }
         
@@ -194,10 +201,22 @@
             svg.transition().duration(1000).call(
                 zoom.transform,
                 d3.zoomIdentity.translate(translate[0], translate[1]).scale(scale)
+
+        
             );
+
+            if (scale > 1) {
+                viewport.selectAll(".country")
+                    .attr("visibility", d2 => (d === d2 ? "visible" : "hidden"));
+            } else {
+                viewport.selectAll(".country")
+                    .attr("visibility", "visible");
+                }
+            
         }
 
         //adding countries but colored by total points
+
 
         viewport.selectAll(".country")
             .data(worldData.features)
@@ -214,8 +233,7 @@
             .on("mouseover", mouseOver)
             .on("mouseleave", mouseLeave) //implementing our lovely hover feature
             .on("click", clicked);
-
- 
+    
 
         //legend - we should move to the side of graph I think or get rid of entirely cause of hover feature once implemented
         const legend = d3.select("#legend");
