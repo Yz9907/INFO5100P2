@@ -114,7 +114,7 @@
 
 
         const projection = d3.geoMercator()
-            .translate([width / 2, height / 2 + 110]); //set these values cause i'm trying to get the map more centered in the SVG
+            .translate([width / 2, (height / 2) + 110]); //set these values cause i'm trying to get the map more centered in the SVG
 
         const path = d3.geoPath().projection(projection);
 
@@ -126,6 +126,7 @@
         //have to convert country codes to the full length names to get world_map geo values
         championData.forEach(d => {
             d.Nationality = countryName[d.Nationality] || d.Nationality; 
+            console.log(d);
         });
 
         //adding all the champion points together per country
