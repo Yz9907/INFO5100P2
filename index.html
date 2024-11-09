@@ -84,6 +84,8 @@
         </div>
         <svg id="legend" width="200" height="300"></svg>
     </div>
+
+    <div id = "buttons-bar"></div> <!-- Adding buttons! -->
     <script>
         //switching country codes to full country names to match world data
         const countryName = {
@@ -121,7 +123,7 @@
         async function loadData() {
 
         const worldData = await d3.json("data/world_map.json");
-        const championData = await d3.csv("data/df_champion_clean.csv", d3.autoType);
+        const championData = await d3.csv("data/merged_dataset_F1.csv", d3.autoType);
 
         //have to convert country codes to the full length names to get world_map geo values
         championData.forEach(d => {
@@ -218,7 +220,6 @@
 
         //adding countries but colored by total points
 
-
         viewport.selectAll(".country")
             .data(worldData.features)
             .join("path")
@@ -256,11 +257,83 @@
                 .text(`${min} - ${max}`);
             });
 
-        
+        function updateGraphsAnimated(yearKey) {
+            const data = myDictionary[yearKey]
 
+            // From Lecture
+
+            // const genres = d3.map(data, d => d.genre) 
+            // const genreScale = d3.scaleBand().domain(genres).range([0, chartWidth])
+            //                                 .padding(0.05);
+            
+            // // Update and animate axes
+            // bottomAxis.scale(genreScale)
+            // bottomAxisG.transition().call(bottomAxis);
+            
+            // chartArea.selectAll('rect.bar').data( data, d => d['genre']  )
+            //      .join( enter => enter.append('rect')
+            //                           .attr('class','bar')
+            //                           .attr("fill", "steelblue")
+            //                           .attr("x", d => genreScale(d.genre))
+            //                           .attr("y", d => percentScale(d.percentpass))
+            //                           .attr("height", d => percentScale(0) - percentScale(d.percentpass))
+            //                           .attr("width", genreScale.bandwidth())
+            //                           .attr("opacity", 0) // Set opacity low, then animate to 1 to make them fade in
+            //                           .call( enter => enter.transition()
+            //                                                .attr('opacity',1) ),
+            //             update => update.call( update => update.transition()  // Animate resizing and movement
+            //                                                    .attr("fill", "steelblue")
+            //                                                    .attr("x", d => genreScale(d.genre))
+            //                                                    .attr("y", d => percentScale(d.percentpass))
+            //                                                    .attr("height", d => percentScale(0) - percentScale(d.percentpass))
+            //                                                    .attr("width", genreScale.bandwidth()) ),
+            //             exit => exit.call( exit => exit.transition().attr('opacity',0).remove() ) ); 
+      }   
+
+
+    let myDictionary = {
+            "1950-1963": [],
+            "1964-1977": [],
+            "1978-1991": [], 
+            "1992-2005": [],
+            "2006-2020": [],
         };
 
+    function assignDataToRanges(data, ranges) {
+        data.forEach(v => {
+            for (let range in ranges) {
+                const [startYear, endYear] = range.split("-");
+                if (v.Year >= parseInt(startYear) && v.Year <= parseInt(endYear)) {
+                    ranges[range].push(v);
+                }
+            }
+        });
+    }
+
+    assignDataToRanges(championData, myDictionary);
+
+    console.log(myDictionary);
+
+    // Buttons and Interactivity
+    const all_given_keys = Object.keys(myDictionary).sort()
+    console.log(all_given_keys)
+
+    all_given_keys.forEach( d => {
+        d3.select("div#buttons-bar")
+            .append("button")
+            .text(d)
+            .on("click", function(){
+                updateGraphsAnimated(championData[d])
+            })
+    })
+
+    };
+        
+
     loadData();
+    updateGraphsAnimated("1950-1963");
+
+
 </script>
 </body>
 </html>
