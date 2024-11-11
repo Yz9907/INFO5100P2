@@ -62,6 +62,14 @@
             border-color: #E10500;
             border-width: 2px;
         }
+
+        .gridlines line {
+            stroke: #bbb;
+        }
+
+        .gridlines .domain {
+            stroke: none;
+        }
     </style>
 
 </head>
@@ -89,8 +97,12 @@
         <svg id="legend" width="200" height="300"></svg>
     </div>
 
-    <div id="buttons-bar"></div> <!-- Adding buttons! -->
+    <div id="buttons-bar">
+
+        <h3>Win Rate for Each Country Across Time</h3>
+    </div> <!-- Adding buttons! -->
     <svg id="barchart" height="500" width="800" style="margin-top:50px">
+
 
         <script>
             //switching country codes to full country names to match world data
@@ -320,7 +332,7 @@
 
                 console.log(myDictionary);
 
-                // Buttons and Interactivity
+                <!-- // Buttons and Interactivity
                 const all_given_keys = Object.keys(myDictionary).sort()
                 console.log(all_given_keys)
 
@@ -331,17 +343,16 @@
                         .on("click", function () {
                             updateGraphsAnimated(championData[d])
                         })
-                })
-
+                }) -->
             };
 
 
             loadData();
-            updateGraphsAnimated("1950-1963");
+            //updateGraphsAnimated("1950-1963");
 
 
 
-            //Interactive Bar Chart
+            //New: Interactive Bar Chart
             const svg_bar = d3.select("svg#barchart");
             const width_bar = svg_bar.attr("width");
             const height_bar = svg_bar.attr("height");
@@ -349,19 +360,99 @@
             const chartWidth_bar = width_bar - margin_bar.left - margin_bar.right;
             const chartHeight_bar = height_bar - margin_bar.top - margin_bar.bottom;
 
-            let annotations_bar = svg_bar.append("g").attr("id", "annotations");
-            let chartArea_bar = svg_bar.append("g").attr("id", "points")
+            let annotations = svg_bar.append("g").attr("id", "annotations");
+            let chartArea = svg_bar.append("g").attr("id", "points")
                 .attr("transform", `translate(${margin_bar.left},${margin_bar.top})`);
 
             // Import some JSON data
-            d3.csv("merged_dataset_F1.csv", d3.autoType)
-                .then((yearData) => {
+            d3.json("data/championships_by_nationality.json", d3.autoType)
+                .then((mergedData) => {
 
-                    console.log("Inside yearData");
-                    console.log(yearData);
+                    console.log("Inside data");
+                    console.log(mergedData);
 
-                });  
+
+                    const percentScale = d3.scaleLinear().domain([0, 1]).range([chartHeight_bar, 0]);
+                    let leftAxis = d3.axisLeft(percentScale).tickFormat(d3.format('.0%'));
+                    let leftGridlines = d3.axisLeft(percentScale)
+                        .tickSize(-chartWidth_bar - 10)
+                        .tickFormat("")
+                    annotations.append("g")
+                        .attr("class", "y axis")
+                        .attr("transform", `translate(${margin_bar.left - 10},${margin_bar.top})`)
+                        .call(leftAxis)
+                    annotations.append("g")
+                        .attr("class", "y gridlines")
+                        .attr("transform", `translate(${margin_bar.left - 10},${margin_bar.top})`)
+                        .call(leftGridlines)
+
+                    // The x axis is going to be changing because genres change - we need to store and adjust it
+                    // We leave xAxis as a blank axis for now, but keep the reference outside of the function so we can rewrite it
+                    let bottomAxis = d3.axisBottom()
+                    let bottomAxisG = annotations.append("g")
+                        .attr("class", "x axis")
+                        .attr("transform", `translate(${margin_bar.left},${chartHeight_bar + margin_bar.top + 10})`)
+
+
+                    function updateBarsAnimated(yearKey) {
+
+                        const data = mergedData[yearKey]
+                        console.log(data)
+
+                        const genres = d3.map(data, d => d.Nationality)
+                        const genreScale = d3.scaleBand().domain(genres).range([0, chartWidth_bar])
+                            .padding(0.05);
+
+                        // Update and animate axes
+                        bottomAxis.scale(genreScale)
+                        bottomAxisG.transition().call(bottomAxis);
+
+                        chartArea.selectAll('rect.bar').data(data, d => d['Nationality'])
+                            .join(enter => enter.append('rect')
+                                .attr('class', 'bar')
+                                .attr("fill", "#E10500")
+                                .attr("x", d => genreScale(d.Nationality))
+                                .attr("y", d => percentScale(d.Percentage))
+                                .attr("height", d => percentScale(0) - percentScale(d.Percentage))
+                                .attr("width", genreScale.bandwidth())
+                                .attr("opacity", 0) // Set opacity low, then animate to 1 to make them fade in
+                                .call(enter => enter.transition()
+                                    .attr('opacity', 1)),
+                                update => update.call(update => update.transition()  // Animate resizing and movement
+                                    .attr("fill", "#E10500")
+                                    .attr("x", d => genreScale(d.Nationality))
+                                    .attr("y", d => percentScale(d.Percentage))
+                                    .attr("height", d => percentScale(0) - percentScale(d.Percentage))
+                                    .attr("width", genreScale.bandwidth())),
+                                exit => exit.call(exit => exit.transition().attr('opacity', 0).remove())); // Animate opacity to fade out
+
+                    }
+
+                    const allKeys = Object.keys(mergedData).sort();
+                    allKeys.forEach(d => {
+                        // For each year key, add a new button to the button bar
+                        d3.select("div#buttons-bar")
+                            .append("button")
+                            .text(d)
+                            .on("click", function () {
+                                // When it's clicked, call updateBars to update the chart
+                                updateBarsAnimated(d);
+                            })
+                    });
+
+
+                    // We do not want to start with a blank screen, so call it once
+                    updateBarsAnimated("All Years");
+
+
+                });
+
+
+
+
+
         </script>
+
 </body>
 
 </html>

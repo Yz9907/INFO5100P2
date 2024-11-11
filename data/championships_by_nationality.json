@@ -1,0 +1,219 @@
+{
+    "1950-1963": [
+        {
+            "Nationality": "ARG",
+            "Championships": 25.0,
+            "Percentage": 0.5952380952380952
+        },
+        {
+            "Nationality": "AUS",
+            "Championships": 6.0,
+            "Percentage": 0.14285714285714285
+        },
+        {
+            "Nationality": "GBR",
+            "Championships": 5.0,
+            "Percentage": 0.11904761904761904
+        },
+        {
+            "Nationality": "ITA",
+            "Championships": 5.0,
+            "Percentage": 0.11904761904761904
+        },
+        {
+            "Nationality": "USA",
+            "Championships": 1.0,
+            "Percentage": 0.023809523809523808
+        }
+    ],
+    "1964-1977": [
+        {
+            "Nationality": "AUS",
+            "Championships": 3.0,
+            "Percentage": 0.1
+        },
+        {
+            "Nationality": "AUT",
+            "Championships": 7.0,
+            "Percentage": 0.23333333333333334
+        },
+        {
+            "Nationality": "BRA",
+            "Championships": 4.0,
+            "Percentage": 0.13333333333333333
+        },
+        {
+            "Nationality": "GBR",
+            "Championships": 15.0,
+            "Percentage": 0.5
+        },
+        {
+            "Nationality": "NZL",
+            "Championships": 1.0,
+            "Percentage": 0.03333333333333333
+        }
+    ],
+    "1978-1991": [
+        {
+            "Nationality": "AUS",
+            "Championships": 1.0,
+            "Percentage": 0.02702702702702703
+        },
+        {
+            "Nationality": "AUT",
+            "Championships": 3.0,
+            "Percentage": 0.08108108108108109
+        },
+        {
+            "Nationality": "BRA",
+            "Championships": 18.0,
+            "Percentage": 0.4864864864864865
+        },
+        {
+            "Nationality": "FIN",
+            "Championships": 1.0,
+            "Percentage": 0.02702702702702703
+        },
+        {
+            "Nationality": "FRA",
+            "Championships": 12.0,
+            "Percentage": 0.32432432432432434
+        },
+        {
+            "Nationality": "RSA",
+            "Championships": 1.0,
+            "Percentage": 0.02702702702702703
+        },
+        {
+            "Nationality": "USA",
+            "Championships": 1.0,
+            "Percentage": 0.02702702702702703
+        }
+    ],
+    "1992-2005": [
+        {
+            "Nationality": "CAN",
+            "Championships": 1.0,
+            "Percentage": 0.016129032258064516
+        },
+        {
+            "Nationality": "ESP",
+            "Championships": 2.0,
+            "Percentage": 0.03225806451612903
+        },
+        {
+            "Nationality": "FIN",
+            "Championships": 4.0,
+            "Percentage": 0.06451612903225806
+        },
+        {
+            "Nationality": "FRA",
+            "Championships": 4.0,
+            "Percentage": 0.06451612903225806
+        },
+        {
+            "Nationality": "GBR",
+            "Championships": 2.0,
+            "Percentage": 0.03225806451612903
+        },
+        {
+            "Nationality": "GER",
+            "Championships": 49.0,
+            "Percentage": 0.7903225806451613
+        }
+    ],
+    "2006-2020": [
+        {
+            "Nationality": "ESP",
+            "Championships": 2.0,
+            "Percentage": 0.02857142857142857
+        },
+        {
+            "Nationality": "FIN",
+            "Championships": 1.0,
+            "Percentage": 0.014285714285714285
+        },
+        {
+            "Nationality": "GBR",
+            "Championships": 50.0,
+            "Percentage": 0.7142857142857143
+        },
+        {
+            "Nationality": "GER",
+            "Championships": 17.0,
+            "Percentage": 0.24285714285714285
+        }
+    ],
+    "All Years": [
+        {
+            "Nationality": "ARG",
+            "Championships": 25.0,
+            "Percentage": 0.1037344398340249
+        },
+        {
+            "Nationality": "AUS",
+            "Championships": 10.0,
+            "Percentage": 0.04149377593360996
+        },
+        {
+            "Nationality": "AUT",
+            "Championships": 10.0,
+            "Percentage": 0.04149377593360996
+        },
+        {
+            "Nationality": "BRA",
+            "Championships": 22.0,
+            "Percentage": 0.0912863070539419
+        },
+        {
+            "Nationality": "CAN",
+            "Championships": 1.0,
+            "Percentage": 0.004149377593360996
+        },
+        {
+            "Nationality": "ESP",
+            "Championships": 4.0,
+            "Percentage": 0.016597510373443983
+        },
+        {
+            "Nationality": "FIN",
+            "Championships": 6.0,
+            "Percentage": 0.024896265560165973
+        },
+        {
+            "Nationality": "FRA",
+            "Championships": 16.0,
+            "Percentage": 0.06639004149377593
+        },
+        {
+            "Nationality": "GBR",
+            "Championships": 72.0,
+            "Percentage": 0.2987551867219917
+        },
+        {
+            "Nationality": "GER",
+            "Championships": 66.0,
+            "Percentage": 0.27385892116182575
+        },
+        {
+            "Nationality": "ITA",
+            "Championships": 5.0,
+            "Percentage": 0.02074688796680498
+        },
+        {
+            "Nationality": "NZL",
+            "Championships": 1.0,
+            "Percentage": 0.004149377593360996
+        },
+        {
+            "Nationality": "RSA",
+            "Championships": 1.0,
+            "Percentage": 0.004149377593360996
+        },
+        {
+            "Nationality": "USA",
+            "Championships": 2.0,
+            "Percentage": 0.008298755186721992
+        }
+    ]
+}
