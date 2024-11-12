@@ -65,6 +65,11 @@
 
         }
 
+        .country-label {
+            color: white;
+            background-color: white;
+        }
+
     </style>
 
 </head>
@@ -125,6 +130,7 @@
 
         const path = d3.geoPath().projection(projection);
 
+        
         //adding labels to each of the countries so we can make them appear when users click on each respective one
         const countryLabel = svg.append("text") 
             .attr("class", "country-label")
