@@ -60,6 +60,11 @@
             border-width: 2px;
         }
 
+        .legend-title {
+            font-size: medium;
+
+        }
+
     </style>
 
 </head>
@@ -119,6 +124,13 @@
             .translate([width / 2, (height / 2) + 110]); //set these values cause i'm trying to get the map more centered in the SVG
 
         const path = d3.geoPath().projection(projection);
+
+        //adding labels to each of the countries so we can make them appear when users click on each respective one
+        const countryLabel = svg.append("text") 
+            .attr("class", "country-label")
+            .attr("x", width / 2) 
+            .attr("y", 50)   
+            .style("display", "none");
 
         async function loadData() {
 
@@ -184,8 +196,10 @@
                 //.attr("visibility", (transform.k > 3) ? "visible" : "hidden") FROM LECTURE 10/21 - will be useful for hiding menu after country is no longer selected
                 .style("stroke-width", .5 / transform.k);
 
+
             if (transform.k <= 1) {
-                viewport.selectAll(".country").attr("visibility", "visible");
+                viewport.selectAll(".country").attr("visibility", "visible") //making map reappear when users zoom back out
+                countryLabel.style("display", "none");     //making country labels invisible once user zooms back out
             }
             
             
@@ -215,6 +229,15 @@
                 viewport.selectAll(".country")
                     .attr("visibility", "visible");
                 }
+
+            const [labelX, labelY] = path.centroid(d); //calculating center of each country so we know where to place the label
+            //centroid(d) usage taken from here CITE** (https://stackoverflow.com/questions/12068510/calculate-centroid-d3)
+            const countryName = d.properties.name_long;
+            countryLabel //defined up at top, it's the country names
+                .attr("x", labelX)
+                .attr("y", labelY)
+                .text(countryName)
+                .style("display", "block"); //making country names visible again since we hid them in the beginning
             
         }
 
@@ -241,20 +264,26 @@
         const legend = d3.select("#legend");
         const thresholds = [1].concat(colorScale.quantiles());  //placing 1 at the beginning so that countries with 0 points don't mistakingly get placed on legend
 
+        legend.append("text")
+                .attr("x", 10)            
+                .attr("y", 20)            
+                .attr("class", "legend-title") 
+                .text("Total F1 Points Scored"); 
+
         colorScale.range().forEach((color, i) => {
             legend.append("rect")
                 .attr("x", 10)
-                .attr("y", i * 25)
+                .attr("y", i * 25 + 30) //moving legend toward bottom of map
                 .attr("width", 20)
                 .attr("height", 20)
-                .attr("fill", color);
+                .attr("fill", color); //matching the legend rectangles to our colorscale colors for the countries
 
             const min = Math.round(thresholds[i]);
             const max = Math.round(thresholds[i + 1] || d3.max(pointsArray)); 
             legend.append("text")
                 .attr("x", 40)
-                .attr("y", i * 25 + 15)
-                .text(`${min} - ${max}`);
+                .attr("y", i * 25 + 45) //shifting thresholds down so there's no overlap
+                .text(`${min} - ${max}`); //our thresholds are HUGE especially the last one, we might need to display the thresholds also within each country once clicked for user clarity???
             });
 
         function updateGraphsAnimated(yearKey) {
