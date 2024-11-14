@@ -123,7 +123,6 @@
     
             <svg id="choropleth" height="700" width="1000"></svg>
         </div>
-        <svg id="legend" width="200" height="300"></svg>
     </div>
 
     <div id = "button-title">
@@ -199,12 +198,7 @@
         const path = d3.geoPath().projection(projection);
 
         
-        //adding labels to each of the countries so we can make them appear when users click on each respective one
-        const countryLabel = svg.append("text") 
-            .attr("class", "country-label")
-            .attr("x", width / 2) 
-            .attr("y", 50)   
-            .style("display", "none");
+
 
         async function loadData() {
 
@@ -270,7 +264,10 @@
             viewport.selectAll(".country")
                 //.attr("visibility", (transform.k > 3) ? "visible" : "hidden") FROM LECTURE 10/21 - will be useful for hiding menu after country is no longer selected
                 .style("stroke-width", .5 / transform.k);
-
+               
+            if (transform.k <= 1) {
+            labelGroup.style("display", "none");
+            }
 
             if (transform.k <= 1) {
                 viewport.selectAll(".country").attr("visibility", "visible") //making map reappear when users zoom back out
@@ -279,7 +276,26 @@
             
             
         }
-        
+    
+    //adding country names to appear on each country when clicked
+    const labelGroup = svg.append("g")
+        .attr("class", "country-label-group")
+        .style("display", "none"); 
+
+    //trying to make a background so labels are legible
+    const labelBackground = labelGroup.append("rect")
+        .attr("fill", "orange")
+        .attr("opacity", 0.9) //slightly see through but not entirely opaque so can still see country borders
+        .attr("width", 120) //making background wide enough to fit different country names
+        .attr("height", 20); 
+
+
+    const countryLabel = labelGroup.append("text")
+        .attr("class", "country-label")
+        .attr("fill", "black")
+        .attr("text-anchor", "middle"); //making text in center
+
+
         //clicking on country gets zoomed in view
         function clicked(event, d) {
             let bounds = path.bounds(d);
@@ -304,15 +320,25 @@
                 viewport.selectAll(".country")
                     .attr("visibility", "visible");
                 }
+            
 
-            const [labelX, labelY] = path.centroid(d); //calculating center of each country so we know where to place the label
+        const [labelX, labelY] = path.centroid(d); //calculating center of each country so we know where to place the label
             //centroid(d) usage taken from here CITE** (https://stackoverflow.com/questions/12068510/calculate-centroid-d3)
-            const countryName = d.properties.name_long;
-            countryLabel //defined up at top, it's the country names
-                .attr("x", labelX)
-                .attr("y", labelY)
-                .text(countryName)
-                .style("display", "block"); //making country names visible again since we hid them in the beginning
+        const countryName = d.properties.name_long;
+        
+        countryLabel
+            .attr("x", labelX) 
+            .attr("y", labelY) 
+            .text(countryName);
+
+        //setting the background to be centered around the text
+        labelBackground
+            .attr("x", labelX - 50) 
+            .attr("y", labelY - 15); 
+
+        //making rectangle background and text visible when country is clicked
+        labelGroup.style("display", "block");
+        countryLabel.style("display", "block")
             
         }
 
@@ -335,9 +361,12 @@
             .on("click", clicked);
     
 
-        //legend - we should move to the side of graph I think or get rid of entirely cause of hover feature once implemented
-        const legend = d3.select("#legend");
+        //setting legend to be inside svg
         const thresholds = [1].concat(colorScale.quantiles());  //placing 1 at the beginning so that countries with 0 points don't mistakingly get placed on legend
+
+        const legend = svg.append("g")
+        .attr("id", "legend")
+        .attr("transform", `translate(${width - 1000}, ${height - 160})`); 
 
         legend.append("text")
                 .attr("x", 10)            
