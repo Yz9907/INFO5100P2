@@ -70,6 +70,40 @@
             background-color: white;
         }
 
+        #buttons-bar {
+            display: flex;
+            margin-top: 40px;
+            text-align: center;
+        }
+        
+        #button-title {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        #button-title .h3 {
+            padding-left: 20px;
+        }
+
+        #buttons-bar button {
+            border: none;
+            background: none;
+            cursor: pointer; 
+            text-align: center;
+        }
+
+        #buttons-bar img {
+            width: 160px;
+        }
+
+        #buttons-bar div {
+            font-size: 14px;
+            margin-top: 5px;
+        }
+
     </style>
 
 </head>
@@ -95,8 +129,45 @@
         <svg id="legend" width="200" height="300"></svg>
     </div>
 
-    <div id = "buttons-bar"></div> <!-- Adding buttons! -->
+    <div id = "button-title">
+        <h3> Showing the Win Rate for Each Country Across the Years </h3> 
+        <div id = "buttons-bar">  </div> <!-- Adding buttons! -->
+
+    </div>
+    
     <script>
+
+        //putting button definitions up here after map creation
+
+        //making each of the buttons map to an image so our page looks more visually appealing
+        const imagePaths = {
+            "1950-1963": "images/ferrari.png",
+            "1964-1977": "images/mercedes.png",
+            "1978-1991": "images/kick-sauber.png",
+            "1992-2005": "images/mclaren.png",
+            "2006-2020": "images/red-bull-racing.png",
+            "All Years": "images/haas.png"
+        };
+        //images taken from F1 website - CITE: (https://www.formula1.com/en/teams)
+
+        const buttonsBar = d3.select("#buttons-bar");
+
+        Object.keys(imagePaths).forEach(yearRange => {
+            //making one button for each image
+            const button = buttonsBar.append("button")
+                .on("click", function () {
+                    updateGraphsAnimated(yearRange);
+                });
+            
+            //putting the image into each button
+            button.append("img")
+                .attr("src", imagePaths[yearRange])
+                                    
+            //putting the year range below the image so that it still has meaning to users for the time frame
+            button.append("div").text(yearRange);
+        });
+
+
         //switching country codes to full country names to match world data
         const countryName = {
             "ITA": "Italy",
@@ -326,7 +397,7 @@
             //             exit => exit.call( exit => exit.transition().attr('opacity',0).remove() ) ); 
       }   
 
-
+/*
     let myDictionary = {
             "1950-1963": [],
             "1964-1977": [],
@@ -334,7 +405,7 @@
             "1992-2005": [],
             "2006-2020": [],
         };
-
+*/ 
     function assignDataToRanges(data, ranges) {
         data.forEach(v => {
             for (let range in ranges) {
