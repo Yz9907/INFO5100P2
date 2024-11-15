@@ -111,6 +111,71 @@
         .gridlines .domain {
             stroke: none;
         }
+
+        .table-container {
+            flex: 1;
+            margin-left: 20px;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+
+        .table-container h3 {
+            font-family: Arial, sans-serif;
+            color: #333;
+            font-size: 20px;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+
+        #driver-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-family: Arial, sans-serif;
+        }
+
+
+        #driver-table thead th {
+            background-color: #333;
+            color: #fff;
+            padding: 10px;
+            text-align: left;
+            font-weight: bold;
+            font-size: 16px;
+            border-top: 1px solid #333;
+            border-bottom: 2px solid #333;
+        }
+
+        #driver-table tbody td {
+            padding: 8px;
+            border-bottom: 1px solid #ddd;
+            color: #555;
+            text-align: left;
+        }
+
+
+        #driver-table tbody tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+
+
+        #driver-table tbody tr:hover {
+            background-color: #e0e0e0;
+            cursor: pointer;
+        }
+
+        #country-title {
+            font-family: Arial, sans-serif;
+            color: #333;
+            font-size: 20px;
+            margin-bottom: 10px;
+            text-align: center;
+            display: none;
+        }
     </style>
 
 </head>
@@ -123,7 +188,7 @@
     </div>
 
 
-    <div class="map">
+    <div class="map" style="display: flex; flex-direction: row;">
         <div class="flex-column">
             <div class="title">
                 <img src="images/flag.png" alt="Checkered Flag" class="flag-icon">
@@ -135,6 +200,32 @@
 
             <svg id="choropleth" height="700" width="1000"></svg>
         </div>
+
+        <div class="table-container" id="driver-table-container"
+            style="display: none; width: 250px; margin-left: 0px; height: 300px; overflow-y: auto; margin-top: 100px;">
+            <h3 id="country-title" style="display: none;">Top Drivers from <span id="country-name"></span></h3>
+            <table id="driver-table" style="width: 100%;">
+                <thead>
+                    <tr>
+                        <th>Driver</th>
+                        <th>Points</th>
+                        <th>Races</th>
+                        <th>Podiums</th>
+                        <th>Championships</th>
+                        <th>Years Active</th>
+                    </tr>
+                </thead>
+                <tbody>
+                </tbody>
+            </table>
+        </div>
+
+
+
+
+
+
+
     </div>
 
     <div id="button-title">
@@ -304,6 +395,67 @@
 
 
                     );
+
+
+                    //Yuzu start
+                    // Show the top five drivers _______________________________________________________________________________________________
+                    const selectedCountry = d.properties.name_long;
+                    const countryDrivers = championData
+                        .filter(driver => driver.Nationality === selectedCountry)
+
+                    const groupedDrivers = Object.values(countryDrivers.reduce((acc, driver) => {
+                        if (!acc[driver.Name]) {
+                            acc[driver.Name] = {
+                                Driver: driver.Name,
+                                Points: 0,
+                                Championships: driver.Championships || "0",
+                                Podiums: driver.Podiums || "0",
+                                Race_Entries: driver.Race_Entries || "0",
+                                Years_Active: driver.Years_Active || "N/A"
+                            };
+                        }
+                        acc[driver.Name].Points += driver.Points;
+                        acc[driver.Name].Race_Entries = driver.Race_Entries || "0";
+                        acc[driver.Name].Podiums = driver.Podiums || "0";
+                        acc[driver.Name].Championships = Math.max(acc[driver.Name].Championships, driver.Championships || "0");
+                        acc[driver.Name].Years_Active = driver.Years_Active || "N/A";
+                        return acc;
+                    }, {}));
+
+
+                    const topDrivers = groupedDrivers
+                        .sort((a, b) => b.Points - a.Points)
+                        .slice(0, 5);
+
+
+                    const title = document.getElementById("country-title");
+                    const tableContainer = document.getElementById("driver-table-container");
+                    const countryNameSpan = document.getElementById("country-name");
+                    countryNameSpan.textContent = selectedCountry;
+                    title.style.display = "block";
+                    tableContainer.style.display = "block";
+
+                    const tableBody = d3.select("#driver-table tbody");
+                    tableBody.selectAll("tr").remove();
+
+                    topDrivers.forEach(driver => {
+                        const row = tableBody.append("tr");
+                        row.append("td").text(driver.Driver || driver.Name);
+                        row.append("td").text(driver.Points);
+                        row.append("td").text(driver.Race_Entries || "N/A");
+                        row.append("td").text(driver.Podiums || "N/A");
+                        row.append("td").text(driver.Championships || "0");
+                        row.append("td").text(driver.Years_Active || "N/A");
+                    });
+
+
+
+
+
+
+
+
+
 
                     if (scale > 1) {
                         viewport.selectAll(".country")
