@@ -199,7 +199,10 @@
                     <tr>
                         <th>Driver</th>
                         <th>Points</th>
+                        <th>Races</th>
+                        <th>Podiums</th>
                         <th>Championships</th>
+                        <th>Years Active</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -406,18 +409,19 @@
             const groupedDrivers = Object.values(countryDrivers.reduce((acc, driver) => {
                 if (!acc[driver.Name]) {
                     acc[driver.Name] = {
-                    Driver: driver.Name,
-                    Points: 0,
-                    Championships: driver.Championships || "0"
+                        Driver: driver.Name,
+                        Points: 0,
+                        Championships: driver.Championships || "0",
+                        Podiums: driver.Podiums || "0",
+                        Race_Entries: driver.Race_Entries || "0",
+                        Years_Active: driver.Years_Active || "N/A"
                     };
                 }
-
-
-
-                
-
                 acc[driver.Name].Points += driver.Points;
+                acc[driver.Name].Race_Entries = driver.Race_Entries || "0";
+                acc[driver.Name].Podiums = driver.Podiums || "0";
                 acc[driver.Name].Championships = Math.max(acc[driver.Name].Championships, driver.Championships || "0");
+                acc[driver.Name].Years_Active = driver.Years_Active || "N/A";
                 return acc;
             }, {}));
                     
@@ -440,8 +444,11 @@
             topDrivers.forEach(driver => {
                 const row = tableBody.append("tr");
                 row.append("td").text(driver.Driver || driver.Name); 
-                row.append("td").text(driver.Points);                                   
+                row.append("td").text(driver.Points);
+                row.append("td").text(driver.Race_Entries || "N/A");                                   
+                row.append("td").text(driver.Podiums || "N/A");
                 row.append("td").text(driver.Championships || "0"); 
+                row.append("td").text(driver.Years_Active || "N/A");
             });
         
 
