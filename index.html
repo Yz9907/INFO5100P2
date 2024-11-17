@@ -381,6 +381,23 @@
             .attr("class", "y gridlines")
             .attr("transform", `translate(${margin_bar.left - 10},${margin_bar.top})`)
             .call(yGridlines_yr);
+            
+        // x-axis text
+        annotations_yr.append("text")
+            .attr("class", "x axis-label")
+            .attr("text-anchor", "middle")
+            .attr("x", margin_bar.left + chartWidth_bar_yr / 2)
+            .attr("y", chartHeight_bar_yr + margin_bar.top + 50) 
+            .text("Years Active"); 
+
+        // y-axis text
+        annotations_yr.append("text")
+            .attr("class", "y axis-label")
+            .attr("text-anchor", "middle")
+            .attr("x", -chartHeight_bar_yr / 2)
+            .attr("y", margin_bar.left - 34)
+            .attr("transform", "rotate(-90)")
+            .text("Frequency");
     
         function updateBarsAnimatedYearActive(yearKey) {
             const data = yearKey;
@@ -392,7 +409,6 @@
                 .thresholds(xScale.ticks(Math.sqrt(data.length)));
 
             var bins = histogram(data);
-            
             
             yScale.domain([0, d3.max(bins, d => d.length)]);  // Max frequency of any bin
 
@@ -439,7 +455,7 @@
         let chartArea_lap = svg_fast_lap.append("g").attr("id", "points_lap")
             .attr("transform", `translate(${margin_bar.left},${margin_bar.top})`);
 
-        const percentScale_lap = d3.scaleLinear().domain([0, 1]).range([chartWidth_bar_lap, 0]);
+        const percentScale_lap = d3.scaleLinear().domain([0, 1]).range([chartHeight_bar_lap, 0]);
         let leftAxis_lap = d3.axisLeft(percentScale_lap).tickFormat(d3.format('.0%'));
         let leftGridlines_lap = d3.axisLeft(percentScale_lap)
                                     .tickSize(-chartWidth_bar_lap - 10)
@@ -451,15 +467,31 @@
         annotations_lap.append("g")
                     .attr("class", "y gridlines")
                     .attr("transform", `translate(${margin_bar.left - 10},${margin_bar.top})`)
-                    .call(leftGridlines_lap)
+                    .call(leftGridlines_lap);
 
         let genreScale_lap = d3.scaleBand().range([0, chartWidth_bar_lap]);// d3.scaleBand().range([0, chartWidth_bar_lap]); // Placeholder for the x scale
         let bottomAxis_lap = d3.axisBottom(genreScale_lap);
         let bottomAxisG_lap = annotations_lap.append("g")
                     .attr("class", "x axis")
-                    .attr("transform", `translate(${margin_bar.left},${chartHeight_bar_lap + margin_bar.top + 70})`)
+                    .attr("transform", `translate(${margin_bar.left},${chartHeight_bar_lap + margin_bar.top + 10})`)
                     .call(bottomAxis_lap);
 
+        // x-axis text
+        annotations_lap.append("text")
+            .attr("class", "x axis-label")
+            .attr("text-anchor", "middle")
+            .attr("x", margin_bar.left + chartWidth_bar_lap / 2)
+            .attr("y", chartHeight_bar_lap + margin_bar.top + 50) 
+            .text("Nation"); 
+
+        // y-axis text
+        annotations_lap.append("text")
+            .attr("class", "y axis-label")
+            .attr("text-anchor", "middle")
+            .attr("x", -chartHeight_bar_lap / 2)
+            .attr("y", margin_bar.left - 40)
+            .attr("transform", "rotate(-90)")
+            .text("Fastest Rate (%)");
 
         function updateBarsAnimatedLap(yearKey) {
 
@@ -475,25 +507,24 @@
             chartArea_lap.selectAll('rect.bar')
                 .data(data)
                 .join(enter => enter.append('rect')
-                    .attr('class', 'bar')
-                    .attr("fill", "#E10500")
-                    .attr("x", d => genreScale_lap(d.Nationality))
+                .attr('class', 'bar')
+                .attr("fill", "#E10500")
+                .attr("x", d => genreScale_lap(d.Nationality))
+                .attr("y", d => percentScale_lap(d.FastLap_Rate)) // Start at bottom
+                .attr("height", 0) // Grow up
+                .attr("width", genreScale_lap.bandwidth())
+                .call(enter => enter.transition()
                     .attr("y", d => percentScale_lap(d.FastLap_Rate))
-                    .attr("height", d => percentScale_lap(0) - percentScale_lap(d.FastLap_Rate))
-                    .attr("width", genreScale_lap.bandwidth())
-                    .attr("opacity", 0) // Set opacity low, then animate to 1 to make them fade in
-                    .call(enter => enter.transition()
-                        .attr('opacity', 1)),
-                    update => update.call(update => update.transition()  // Animate resizing and movement
-                        .attr("fill", "#E10500")
-                        .attr("x", d => genreScale_lap(d.Nationality))
-                        .attr("y", d => percentScale_lap(d.FastLap_Rate))
-                        .attr("height", d => percentScale_lap(0) - percentScale_lap(d.FastLap_Rate))
-                        .attr("width", genreScale_lap.bandwidth())),
-                    exit => exit.call(exit => exit.transition().attr('opacity', 0).remove())); // Animate opacity to fade out
+                    .attr("height", d => percentScale_lap(0) - percentScale_lap(d.FastLap_Rate))),
+            update => update.call(update => update.transition()
+                .attr("x", d => genreScale_lap(d.Nationality))
+                .attr("y", d => percentScale_lap(d.FastLap_Rate))
+                .attr("height", d => percentScale_lap(0) - percentScale_lap(d.FastLap_Rate))
+                .attr("width", genreScale_lap.bandwidth())),
+            exit => exit.call(exit => exit.transition().attr('opacity', 0).remove())
+        ); 
         };
 
-        //updateBarsAnimated(myDictionary["All Years"]); 
         // Buttons and Interactivity
         const all_given_keys = Object.keys(myDictionary).sort()
         all_given_keys.forEach(d => {
