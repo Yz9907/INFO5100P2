@@ -45,6 +45,12 @@
             flex-direction: column;
         }
 
+        .flex-row {
+            display: flex;
+            flex-direction: row;
+            gap: 20px;
+        }
+
         .flag-icon {
             height: 40px;
             width: auto;
@@ -90,16 +96,24 @@
 </div>
 
 <div id="buttons-bar"></div>
+
+<div class = "flex-row">
 <div>
     <h3>Win Rate for Each Country Across Time</h3>
     <svg id="barchart" height="500" width="800" style="margin-top:50px"></svg>
 </div>
-<div>
-    <h3>Frequency Histogram of the Number of Years a Driver is Active</h3>
-    <svg id="barchart_year_active" height="300" width="500"></svg>
+<div class = "flex-column">
+    <div>
+        <h3>Frequency Histogram of the Number of Years a Driver is Active</h3>
+        <svg id="barchart_year_active" height="300" width="500"></svg>
+    </div>
+    <div>
+        <h3>FastLap Rate for Each Country Across Time</h3>
+        <svg id = "barchart_fast_lap" height="300" width="500"></svg>
+    </div>
 </div>
-    <h3>FastLap Rate for Each Country Across Time</h3>
-    <svg id = "barchart_fast_lap" height="300" width="500"></svg>
+</div>
+</div>
 <script>
     // Mapping country codes to full country names
     const countryName = {
