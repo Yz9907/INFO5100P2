@@ -391,7 +391,7 @@
 
         let yGridlines_yr = d3.axisLeft(yScale)
             .tickSize(-chartWidth_bar_yr)
-            .tickFormat(""); // Hide gridline labels
+            .tickFormat("");
 
         annotations_yr.append("g")
             .attr("class", "y gridlines")
@@ -418,7 +418,7 @@
         function updateBarsAnimatedYearActive(yearKey) {
             const data = yearKey;
 
-            xScale.domain([0, d3.max(data, d => d.Years_Active)]);  // Adjust domain based on years active range
+            xScale.domain([0, d3.max(data, d => d.Years_Active)]);  // changing the domain based on the frequency on x-axis
             const histogram = d3.histogram()
                 .value(d => d.Years_Active)
                 .domain(xScale.domain())
@@ -437,24 +437,24 @@
                     .join(
                         enter => enter.append('rect')
                             .attr('class', 'bar')
-                            .attr("fill", "steelblue") // Set bar color
-                            .attr("x", d => xScale(d.x0)) // Set bar position based on x0 (lower bound)
-                            .attr("y", chartHeight_bar_yr) // Start from the bottom
-                            .attr("width", d => Math.max(0, xScale(d.x1) - xScale(d.x0) - 1)) // Set bar width based on bin range
+                            .attr("fill", "steelblue") 
+                            .attr("x", d => xScale(d.x0)) 
+                            .attr("y", chartHeight_bar_yr) // Start from the bottom of the chartHeight
+                            .attr("width", d => Math.max(0, xScale(d.x1) - xScale(d.x0) - 1)) // setting bar width based on bin range
                             .attr("height", 0)
                             .attr("opacity", 0)
                             .call(enter => enter.transition()
                                 .attr("y", d => yScale(d.length))
                                 .attr("height", d => chartHeight_bar_yr - yScale(d.length))
                                 .attr('opacity', 1)),
-                        update => update.call(update => update.transition()  // Animate resizing and movement
+                        update => update.call(update => update.transition()  // Resizing and movement of the Bars!
                             .duration(500)
-                            .attr("x", d => xScale(d.x0)) // Set bar position based on x0 (lower bound)
-                            .attr("y", d => yScale(d.length)) // Set bar position based on number of elements (length)
-                            .attr("width", d => Math.max(0, xScale(d.x1) - xScale(d.x0) - 1)) // Set bar width based on bin range
-                            .attr("height", d => chartHeight_bar_yr - yScale(d.length)) // Set bar height based on number of elements (length)
+                            .attr("x", d => xScale(d.x0)) 
+                            .attr("y", d => yScale(d.length)) 
+                            .attr("width", d => Math.max(0, xScale(d.x1) - xScale(d.x0) - 1)) 
+                            .attr("height", d => chartHeight_bar_yr - yScale(d.length)) // based on number of elements!
                         ),
-                        exit => exit.call(exit => exit.transition().attr('opacity', 0).remove()) // Animate opacity to fade out on exit
+                        exit => exit.call(exit => exit.transition().attr('opacity', 0).remove())
         );
         };
 
@@ -485,7 +485,7 @@
                     .attr("transform", `translate(${margin_bar.left - 10},${margin_bar.top})`)
                     .call(leftGridlines_lap);
 
-        let genreScale_lap = d3.scaleBand().range([0, chartWidth_bar_lap]);// d3.scaleBand().range([0, chartWidth_bar_lap]); // Placeholder for the x scale
+        let genreScale_lap = d3.scaleBand().range([0, chartWidth_bar_lap]);
         let bottomAxis_lap = d3.axisBottom(genreScale_lap);
         let bottomAxisG_lap = annotations_lap.append("g")
                     .attr("class", "x axis")
@@ -516,7 +516,7 @@
             const genres_lap = d3.map(data, d => d.Nationality);
             const genreScale_lap = d3.scaleBand().domain(genres_lap).range([0, chartWidth_bar_lap]);
 
-            // Update and animate axes
+            // Update and animate axis!
             bottomAxis_lap.scale(genreScale_lap)
             bottomAxisG_lap.transition().call(bottomAxis_lap);
 
@@ -526,8 +526,8 @@
                 .attr('class', 'bar')
                 .attr("fill", "#E10500")
                 .attr("x", d => genreScale_lap(d.Nationality))
-                .attr("y", d => percentScale_lap(d.FastLap_Rate)) // Start at bottom
-                .attr("height", 0) // Grow up
+                .attr("y", d => percentScale_lap(d.FastLap_Rate))
+                .attr("height", 0) 
                 .attr("width", genreScale_lap.bandwidth())
                 .call(enter => enter.transition()
                     .attr("y", d => percentScale_lap(d.FastLap_Rate))
