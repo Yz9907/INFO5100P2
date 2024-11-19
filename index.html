@@ -149,7 +149,7 @@
 
     async function loadData() {
         const worldData = await d3.json("data/world_map.json");
-        const championData = await d3.csv("data/merged_dataset_F1.csv", d3.autoType);
+        var championData = await d3.csv("data/merged_dataset_F1.csv", d3.autoType);
 
         championData.forEach(d => {
             d.Nationality = countryName[d.Nationality] || d.Nationality;
@@ -256,6 +256,7 @@
         
 
         // Part II
+        championData = await d3.csv("data/merged_dataset_F1.csv", d3.autoType);
 
         // Create the Buttons for different Years
         let myDictionary = {
@@ -322,6 +323,7 @@
         function updateBarsAnimated(yearKey) {
 
             const data = yearKey;
+            console.log(data);
 
             const genres = d3.map(data, d => d.Nationality);
             const genreScale = d3.scaleBand().domain(genres).range([0, chartWidth_bar])
