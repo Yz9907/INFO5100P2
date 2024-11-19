@@ -48,6 +48,12 @@
 
         }
 
+        .flex-row {
+            display: flex;
+            flex-direction: row;
+            gap: 20px;
+        }
+
         .flag-icon {
             height: 40px;
             width: auto;
@@ -235,510 +241,825 @@
         <div class="title">
             <img src="images/flag.png" alt="Checkered Flag" class="flag-icon">
 
-            <h3> Click Year Buttons to See Win Rates for Countries </h3>
+            <h3> Click Year Buttons to See Detailed Data for Each Country </h3>
             <img src="images/flag.png" alt="Checkered Flag" class="flag-icon">
 
         </div>
     </div>
     <div id="buttons-bar"> </div> <!-- Adding buttons! -->
 
-    <svg id="barchart" height="450" width="1000" style="margin-top:50px">
+    <!-- <svg id="barchart" height="450" width="1000" style="margin-top:50px"> -->
+
+    <div class="flex-row">
+        <div>
+            <h3>Win Rate for Each Country Across Time</h3>
+            <svg id="barchart" height="500" width="800" style="margin-top:50px"></svg>
+        </div>
+        <div class="flex-column">
+            <div>
+                <h3>Frequency Histogram of the Number of Years a Driver is Active</h3>
+                <svg id="barchart_year_active" height="300" width="500"></svg>
+            </div>
+            <div>
+                <h3>FastLap Rate for Each Country Across Time</h3>
+                <svg id="barchart_fast_lap" height="300" width="500"></svg>
+            </div>
+        </div>
+    </div>
 
 
-        <script>
-
-            //putting button definitions up here after map creation
 
 
-            //switching country codes to full country names to match world data
-            const countryName = {
-                "ITA": "Italy",
-                "ARG": "Argentina",
-                "GBR": "United Kingdom",
-                "AUS": "Australia",
-                "USA": "United States",
-                "NZL": "New Zealand",
-                "AUT": "Austria",
-                "BRA": "Brazil",
-                "RSA": "South Africa",
-                "FIN": "Finland",
-                "FRA": "France",
-                "GER": "Germany",
-                "ESP": "Spain",
-                "CAN": "Canada",
-                "NED": "Netherlands",
+
+    <script>
+        "use strict";
+
+
+        //putting button definitions up here after map creation
+
+
+        //switching country codes to full country names to match world data
+        const countryName = {
+            "ITA": "Italy",
+            "ARG": "Argentina",
+            "GBR": "United Kingdom",
+            "AUS": "Australia",
+            "USA": "United States",
+            "NZL": "New Zealand",
+            "AUT": "Austria",
+            "BRA": "Brazil",
+            "RSA": "South Africa",
+            "FIN": "Finland",
+            "FRA": "France",
+            "GER": "Germany",
+            "ESP": "Spain",
+            "CAN": "Canada",
+            "NED": "Netherlands",
+        };
+
+        const svg = d3.select("#choropleth");
+        const width = +svg.attr("width");
+        const height = +svg.attr("height");
+
+        let mapWidth = svg.attr("width");
+        let mapHeight = svg.attr("height");
+        let viewport = svg.append("g");
+
+
+        const projection = d3.geoMercator()
+            .translate([width / 2, (height / 2) + 110]); //set these values cause i'm trying to get the map more centered in the SVG
+
+        const path = d3.geoPath().projection(projection);
+
+
+
+
+        async function loadData() {
+
+            const worldData = await d3.json("data/world_map.json");
+            const championData = await d3.csv("data/merged_dataset_F1.csv", d3.autoType);
+
+            //have to convert country codes to the full length names to get world_map geo values
+            championData.forEach(d => {
+                d.Nationality = countryName[d.Nationality] || d.Nationality;
+                console.log(d);
+            });
+
+            //adding all the champion points together per country
+            const country_points = {};
+            championData.forEach(d => {
+                if (country_points[d.Nationality]) {
+                    country_points[d.Nationality] += d.Points;
+                } else {
+                    country_points[d.Nationality] = d.Points;
+                }
+            });
+
+            const pointsArray = Object.values(country_points);
+            //figuring out the color scheme and what color scales.
+            const colorScale = d3.scaleQuantile()
+                .domain(pointsArray)
+                //Will need to change these thresholds once data is segregated to every five years
+                .range(["#FECA33", "#F37B1F", "#EE5314", "#E10500", "#B20000"]); //light to dark
+            //color scale set: #514E79 #555A80 #5B6887 #696B94 #8178A0 #9986AD #AF95B9 #C4A5C4 #D0B4C9 
+            //new color scale set: #810003 #B20000 #E10500 #E82C0A #EE5314 #F37B1F #F9A329 #FECA33 #FFF13D (dark to light)
+            //scale generated from here: https://hihayk.github.io/scale/#2/6/12/57/-21/-93/44/10/5B6887/184/28/242/white
+
+            //putting in mouseover hover events
+            //referenced the site linked for help on the interactivity of this map. CITE: https://d3-graph-gallery.com/graph/choropleth_hover_effect.html
+            let mouseOver = function (event, d) {
+                d3.selectAll(".country")
+                    .style("opacity", .9); //making every other country look faded in contrast to selected country
+                d3.select(this)
+                    .style("opacity", 1)
+                    .style("stroke", "black"); //when hovering over country, this is the stroke color
             };
 
-            const svg = d3.select("#choropleth");
-            const width = +svg.attr("width");
-            const height = +svg.attr("height");
-
-            let mapWidth = svg.attr("width");
-            let mapHeight = svg.attr("height");
-            let viewport = svg.append("g");
-
-
-            const projection = d3.geoMercator()
-                .translate([width / 2, (height / 2) + 110]); //set these values cause i'm trying to get the map more centered in the SVG
-
-            const path = d3.geoPath().projection(projection);
+            let mouseLeave = function (event, d) {
+                d3.selectAll(".country")
+                    .style("opacity", 1); //setting opacity of whole map back to 1 after users move from selected country
+                d3.select(this)
+                    .style("stroke", "grey"); //setting stroke back to grey when users move from a selected country
+            };
 
 
+            //attempting to add zoom in features????
+            // Referenced lecture code 24.10.21 showing zoom basics
+            var zoom = d3.zoom()
+                .scaleExtent([1, 20])
+                .translateExtent([[-50, -50], [mapWidth + 50, mapHeight + 50]])
+                .on("zoom", mapZoomed);
 
+            svg.call(zoom);
 
-            async function loadData() {
-
-                const worldData = await d3.json("data/world_map.json");
-                const championData = await d3.csv("data/merged_dataset_F1.csv", d3.autoType);
-
-                //have to convert country codes to the full length names to get world_map geo values
-                championData.forEach(d => {
-                    d.Nationality = countryName[d.Nationality] || d.Nationality;
-                    console.log(d);
-                });
-
-                //adding all the champion points together per country
-                const country_points = {};
-                championData.forEach(d => {
-                    if (country_points[d.Nationality]) {
-                        country_points[d.Nationality] += d.Points;
-                    } else {
-                        country_points[d.Nationality] = d.Points;
-                    }
-                });
-
-                const pointsArray = Object.values(country_points);
-                //figuring out the color scheme and what color scales.
-                const colorScale = d3.scaleQuantile()
-                    .domain(pointsArray)
-                    //Will need to change these thresholds once data is segregated to every five years
-                    .range(["#FECA33", "#F37B1F", "#EE5314", "#E10500", "#B20000"]); //light to dark
-                //color scale set: #514E79 #555A80 #5B6887 #696B94 #8178A0 #9986AD #AF95B9 #C4A5C4 #D0B4C9 
-                //new color scale set: #810003 #B20000 #E10500 #E82C0A #EE5314 #F37B1F #F9A329 #FECA33 #FFF13D (dark to light)
-                //scale generated from here: https://hihayk.github.io/scale/#2/6/12/57/-21/-93/44/10/5B6887/184/28/242/white
-
-                //putting in mouseover hover events
-                //referenced the site linked for help on the interactivity of this map. CITE: https://d3-graph-gallery.com/graph/choropleth_hover_effect.html
-                let mouseOver = function (event, d) {
-                    d3.selectAll(".country")
-                        .style("opacity", .9); //making every other country look faded in contrast to selected country
-                    d3.select(this)
-                        .style("opacity", 1)
-                        .style("stroke", "black"); //when hovering over country, this is the stroke color
-                };
-
-                let mouseLeave = function (event, d) {
-                    d3.selectAll(".country")
-                        .style("opacity", 1); //setting opacity of whole map back to 1 after users move from selected country
-                    d3.select(this)
-                        .style("stroke", "grey"); //setting stroke back to grey when users move from a selected country
-                };
-
-
-                //attempting to add zoom in features????
-                // Referenced lecture code 24.10.21 showing zoom basics
-                var zoom = d3.zoom()
-                    .scaleExtent([1, 20])
-                    .translateExtent([[-50, -50], [mapWidth + 50, mapHeight + 50]])
-                    .on("zoom", mapZoomed);
-
-                svg.call(zoom);
-
-                function mapZoomed({ transform }) {
-                    viewport.attr("transform", transform.toString());
-
-                    viewport.selectAll(".country")
-                        //.attr("visibility", (transform.k > 3) ? "visible" : "hidden") FROM LECTURE 10/21 - will be useful for hiding menu after country is no longer selected
-                        .style("stroke-width", .5 / transform.k);
-
-                    if (transform.k <= 1) {
-                        labelGroup.style("display", "none");
-                    }
-
-                    if (transform.k <= 1) {
-                        viewport.selectAll(".country").attr("visibility", "visible") //making map reappear when users zoom back out
-                        countryLabel.style("display", "none");     //making country labels invisible once user zooms back out
-                    }
-
-
-                }
-
-                //adding country names to appear on each country when clicked
-                const labelGroup = svg.append("g")
-                    .attr("class", "country-label-group")
-                    .style("display", "none");
-
-                //trying to make a background so labels are legible
-                const labelBackground = labelGroup.append("rect")
-                    .attr("fill", "orange")
-                    .attr("opacity", 0.9) //slightly see through but not entirely opaque so can still see country borders
-                    .attr("width", 120) //making background wide enough to fit different country names
-                    .attr("height", 20);
-
-
-                const countryLabel = labelGroup.append("text")
-                    .attr("class", "country-label")
-                    .attr("fill", "black")
-                    .attr("text-anchor", "middle"); //making text in center
-
-
-                //clicking on country gets zoomed in view
-                function clicked(event, d) {
-                    let bounds = path.bounds(d);
-                    let dx = bounds[1][0] - bounds[0][0];
-                    let dy = bounds[1][1] - bounds[0][1];
-                    let x = (bounds[0][0] + bounds[1][0]) / 2;
-                    let y = (bounds[0][1] + bounds[1][1]) / 2;
-                    let scale = Math.max(1, Math.min(10, 0.9 / Math.max(dx / mapWidth, dy / mapHeight)));
-                    let translate = [mapWidth / 2 - x * scale, mapHeight / 2 - y * scale];
-
-                    svg.transition().duration(1000).call(
-                        zoom.transform,
-                        d3.zoomIdentity.translate(translate[0], translate[1]).scale(scale)
-
-
-                    );
-
-
-                    //Yuzu start
-                    // Show the top five drivers _______________________________________________________________________________________________
-                    const selectedCountry = d.properties.name_long;
-                    const countryDrivers = championData
-                        .filter(driver => driver.Nationality === selectedCountry)
-
-                    const groupedDrivers = Object.values(countryDrivers.reduce((acc, driver) => {
-                        if (!acc[driver.Name]) {
-                            acc[driver.Name] = {
-                                Driver: driver.Name,
-                                Points: 0,
-                                Championships: driver.Championships || "0",
-                                Podiums: driver.Podiums || "0",
-                                Race_Entries: driver.Race_Entries || "0",
-                                Years_Active: driver.Years_Active || "N/A"
-                            };
-                        }
-                        acc[driver.Name].Points += driver.Points;
-                        acc[driver.Name].Race_Entries = driver.Race_Entries || "0";
-                        acc[driver.Name].Podiums = driver.Podiums || "0";
-                        acc[driver.Name].Championships = Math.max(acc[driver.Name].Championships, driver.Championships || "0");
-                        acc[driver.Name].Years_Active = driver.Years_Active || "N/A";
-                        return acc;
-                    }, {}));
-
-
-                    const topDrivers = groupedDrivers
-                        .sort((a, b) => b.Points - a.Points)
-                        .slice(0, 5);
-
-
-                    const title = document.getElementById("country-title");
-                    const tableContainer = document.getElementById("driver-table-container");
-                    const countryNameSpan = document.getElementById("country-name");
-                    countryNameSpan.textContent = selectedCountry;
-                    title.style.display = "block";
-                    tableContainer.style.display = "block";
-
-                    const tableBody = d3.select("#driver-table tbody");
-                    tableBody.selectAll("tr").remove();
-
-                    topDrivers.forEach(driver => {
-                        const row = tableBody.append("tr");
-                        row.append("td").text(driver.Driver || driver.Name);
-                        row.append("td").text(driver.Points);
-                        row.append("td").text(driver.Race_Entries || "N/A");
-                        row.append("td").text(driver.Podiums || "N/A");
-                        row.append("td").text(driver.Championships || "0");
-                        row.append("td").text(driver.Years_Active || "N/A");
-                    });
-
-
-
-
-
-
-
-
-
-
-                    if (scale > 1) {
-                        viewport.selectAll(".country")
-                            .attr("visibility", d2 => (d === d2 ? "visible" : "hidden"));
-                    } else {
-                        viewport.selectAll(".country")
-                            .attr("visibility", "visible");
-                    }
-
-
-                    const [labelX, labelY] = path.centroid(d); //calculating center of each country so we know where to place the label
-                    //centroid(d) usage taken from here CITE** (https://stackoverflow.com/questions/12068510/calculate-centroid-d3)
-                    const countryName = d.properties.name_long;
-
-                    countryLabel
-                        .attr("x", labelX)
-                        .attr("y", labelY)
-                        .text(countryName);
-
-                    //setting the background to be centered around the text
-                    labelBackground
-                        .attr("x", labelX - 50)
-                        .attr("y", labelY - 15);
-
-                    //making rectangle background and text visible when country is clicked
-                    labelGroup.style("display", "block");
-                    countryLabel.style("display", "block")
-
-                }
-
-                //adding countries but colored by total points
+            function mapZoomed({ transform }) {
+                viewport.attr("transform", transform.toString());
 
                 viewport.selectAll(".country")
-                    .data(worldData.features)
-                    .join("path")
-                    .attr("class", "country")
-                    .attr("d", path)
-                    .attr("stroke", "grey")
-                    .attr("stroke-width", .2)
-                    .attr("fill", d => {
-                        const countryName = d.properties.name_long;
-                        const points = country_points[countryName];
-                        return points !== undefined ? colorScale(points) : "#E0E0E0"; //any countries that have zeros are just light gray rather than getting compiled up
-                    })
-                    .on("mouseover", mouseOver)
-                    .on("mouseleave", mouseLeave) //implementing our lovely hover feature
-                    .on("click", clicked);
+                    //.attr("visibility", (transform.k > 3) ? "visible" : "hidden") FROM LECTURE 10/21 - will be useful for hiding menu after country is no longer selected
+                    .style("stroke-width", .5 / transform.k);
 
-
-                //setting legend to be inside svg
-                const thresholds = [1].concat(colorScale.quantiles());  //placing 1 at the beginning so that countries with 0 points don't mistakingly get placed on legend
-
-                const legend = svg.append("g")
-                    .attr("id", "legend")
-                    .attr("transform", `translate(${width - 1000}, ${height - 160})`);
-
-                legend.append("text")
-                    .attr("x", 10)
-                    .attr("y", 20)
-                    .attr("class", "legend-title")
-                    .text("Total F1 Points Scored");
-
-                colorScale.range().forEach((color, i) => {
-                    legend.append("rect")
-                        .attr("x", 10)
-                        .attr("y", i * 25 + 30) //moving legend toward bottom of map
-                        .attr("width", 20)
-                        .attr("height", 20)
-                        .attr("fill", color); //matching the legend rectangles to our colorscale colors for the countries
-
-                    const min = Math.round(thresholds[i]);
-                    const max = Math.round(thresholds[i + 1] || d3.max(pointsArray));
-                    legend.append("text")
-                        .attr("x", 40)
-                        .attr("y", i * 25 + 45) //shifting thresholds down so there's no overlap
-                        .text(`${min} - ${max}`); //our thresholds are HUGE especially the last one, we might need to display the thresholds also within each country once clicked for user clarity???
-                });
-
-                function updateGraphsAnimated(yearKey) {
-                    const data = myDictionary[yearKey]
-
-                    // From Lecture
-
-                    // const genres = d3.map(data, d => d.genre) 
-                    // const genreScale = d3.scaleBand().domain(genres).range([0, chartWidth])
-                    //                                 .padding(0.05);
-
-                    // // Update and animate axes
-                    // bottomAxis.scale(genreScale)
-                    // bottomAxisG.transition().call(bottomAxis);
-
-                    // chartArea.selectAll('rect.bar').data( data, d => d['genre']  )
-                    //      .join( enter => enter.append('rect')
-                    //                           .attr('class','bar')
-                    //                           .attr("fill", "steelblue")
-                    //                           .attr("x", d => genreScale(d.genre))
-                    //                           .attr("y", d => percentScale(d.percentpass))
-                    //                           .attr("height", d => percentScale(0) - percentScale(d.percentpass))
-                    //                           .attr("width", genreScale.bandwidth())
-                    //                           .attr("opacity", 0) // Set opacity low, then animate to 1 to make them fade in
-                    //                           .call( enter => enter.transition()
-                    //                                                .attr('opacity',1) ),
-                    //             update => update.call( update => update.transition()  // Animate resizing and movement
-                    //                                                    .attr("fill", "steelblue")
-                    //                                                    .attr("x", d => genreScale(d.genre))
-                    //                                                    .attr("y", d => percentScale(d.percentpass))
-                    //                                                    .attr("height", d => percentScale(0) - percentScale(d.percentpass))
-                    //                                                    .attr("width", genreScale.bandwidth()) ),
-                    //             exit => exit.call( exit => exit.transition().attr('opacity',0).remove() ) ); 
+                if (transform.k <= 1) {
+                    labelGroup.style("display", "none");
                 }
 
-                /*
-                    let myDictionary = {
-                            "1950-1963": [],
-                            "1964-1977": [],
-                            "1978-1991": [], 
-                            "1992-2005": [],
-                            "2006-2020": [],
+                if (transform.k <= 1) {
+                    viewport.selectAll(".country").attr("visibility", "visible") //making map reappear when users zoom back out
+                    countryLabel.style("display", "none");     //making country labels invisible once user zooms back out
+                }
+
+
+            }
+
+            //adding country names to appear on each country when clicked
+            const labelGroup = svg.append("g")
+                .attr("class", "country-label-group")
+                .style("display", "none");
+
+            //trying to make a background so labels are legible
+            const labelBackground = labelGroup.append("rect")
+                .attr("fill", "orange")
+                .attr("opacity", 0.9) //slightly see through but not entirely opaque so can still see country borders
+                .attr("width", 120) //making background wide enough to fit different country names
+                .attr("height", 20);
+
+
+            const countryLabel = labelGroup.append("text")
+                .attr("class", "country-label")
+                .attr("fill", "black")
+                .attr("text-anchor", "middle"); //making text in center
+
+
+            //clicking on country gets zoomed in view
+            function clicked(event, d) {
+                let bounds = path.bounds(d);
+                let dx = bounds[1][0] - bounds[0][0];
+                let dy = bounds[1][1] - bounds[0][1];
+                let x = (bounds[0][0] + bounds[1][0]) / 2;
+                let y = (bounds[0][1] + bounds[1][1]) / 2;
+                let scale = Math.max(1, Math.min(10, 0.9 / Math.max(dx / mapWidth, dy / mapHeight)));
+                let translate = [mapWidth / 2 - x * scale, mapHeight / 2 - y * scale];
+
+                svg.transition().duration(1000).call(
+                    zoom.transform,
+                    d3.zoomIdentity.translate(translate[0], translate[1]).scale(scale)
+
+
+                );
+
+
+                //Yuzu start
+                // Show the top five drivers _______________________________________________________________________________________________
+                const selectedCountry = d.properties.name_long;
+                const countryDrivers = championData
+                    .filter(driver => driver.Nationality === selectedCountry)
+
+                console.log("In Yuzu")
+
+                const groupedDrivers = Object.values(countryDrivers.reduce((acc, driver) => {
+                    if (!acc[driver.Name]) {
+                        acc[driver.Name] = {
+                            Driver: driver.Name,
+                            Points: 0,
+                            Championships: driver.Championships || "0",
+                            Podiums: driver.Podiums || "0",
+                            Race_Entries: driver.Race_Entries || "0",
+                            Years_Active: driver.Years_Active || "N/A"
                         };
-                */
-                function assignDataToRanges(data, ranges) {
-                    data.forEach(v => {
-                        for (let range in ranges) {
+                    }
+                    acc[driver.Name].Points += driver.Points;
+                    acc[driver.Name].Race_Entries = driver.Race_Entries || "0";
+                    acc[driver.Name].Podiums = driver.Podiums || "0";
+                    acc[driver.Name].Championships = Math.max(acc[driver.Name].Championships, driver.Championships || "0");
+                    acc[driver.Name].Years_Active = driver.Years_Active || "N/A";
+                    return acc;
+                }, {}));
+
+
+                const topDrivers = groupedDrivers
+                    .sort((a, b) => b.Points - a.Points)
+                    .slice(0, 5);
+
+
+                const title = document.getElementById("country-title");
+                const tableContainer = document.getElementById("driver-table-container");
+                const countryNameSpan = document.getElementById("country-name");
+                countryNameSpan.textContent = selectedCountry;
+                title.style.display = "block";
+                tableContainer.style.display = "block";
+
+                const tableBody = d3.select("#driver-table tbody");
+                tableBody.selectAll("tr").remove();
+
+                topDrivers.forEach(driver => {
+                    const row = tableBody.append("tr");
+                    row.append("td").text(driver.Driver || driver.Name);
+                    row.append("td").text(driver.Points);
+                    row.append("td").text(driver.Race_Entries || "N/A");
+                    row.append("td").text(driver.Podiums || "N/A");
+                    row.append("td").text(driver.Championships || "0");
+                    row.append("td").text(driver.Years_Active || "N/A");
+                });
+
+
+
+
+
+
+
+
+
+
+                if (scale > 1) {
+                    viewport.selectAll(".country")
+                        .attr("visibility", d2 => (d === d2 ? "visible" : "hidden"));
+                } else {
+                    viewport.selectAll(".country")
+                        .attr("visibility", "visible");
+                }
+
+
+                const [labelX, labelY] = path.centroid(d); //calculating center of each country so we know where to place the label
+                //centroid(d) usage taken from here CITE** (https://stackoverflow.com/questions/12068510/calculate-centroid-d3)
+                const countryName = d.properties.name_long;
+
+                countryLabel
+                    .attr("x", labelX)
+                    .attr("y", labelY)
+                    .text(countryName);
+
+                //setting the background to be centered around the text
+                labelBackground
+                    .attr("x", labelX - 50)
+                    .attr("y", labelY - 15);
+
+                //making rectangle background and text visible when country is clicked
+                labelGroup.style("display", "block");
+                countryLabel.style("display", "block")
+
+            }
+
+            //adding countries but colored by total points
+
+            viewport.selectAll(".country")
+                .data(worldData.features)
+                .join("path")
+                .attr("class", "country")
+                .attr("d", path)
+                .attr("stroke", "grey")
+                .attr("stroke-width", .2)
+                .attr("fill", d => {
+                    const countryName = d.properties.name_long;
+                    const points = country_points[countryName];
+                    return points !== undefined ? colorScale(points) : "#E0E0E0"; //any countries that have zeros are just light gray rather than getting compiled up
+                })
+                .on("mouseover", mouseOver)
+                .on("mouseleave", mouseLeave) //implementing our lovely hover feature
+                .on("click", clicked);
+
+
+            //setting legend to be inside svg
+            const thresholds = [1].concat(colorScale.quantiles());  //placing 1 at the beginning so that countries with 0 points don't mistakingly get placed on legend
+
+            const legend = svg.append("g")
+                .attr("id", "legend")
+                .attr("transform", `translate(${width - 1000}, ${height - 160})`);
+
+            legend.append("text")
+                .attr("x", 10)
+                .attr("y", 20)
+                .attr("class", "legend-title")
+                .text("Total F1 Points Scored");
+
+            colorScale.range().forEach((color, i) => {
+                legend.append("rect")
+                    .attr("x", 10)
+                    .attr("y", i * 25 + 30) //moving legend toward bottom of map
+                    .attr("width", 20)
+                    .attr("height", 20)
+                    .attr("fill", color); //matching the legend rectangles to our colorscale colors for the countries
+
+                const min = Math.round(thresholds[i]);
+                const max = Math.round(thresholds[i + 1] || d3.max(pointsArray));
+                legend.append("text")
+                    .attr("x", 40)
+                    .attr("y", i * 25 + 45) //shifting thresholds down so there's no overlap
+                    .text(`${min} - ${max}`); //our thresholds are HUGE especially the last one, we might need to display the thresholds also within each country once clicked for user clarity???
+            });
+
+
+
+
+
+            //Hermione start
+            const championData2 = await d3.csv("data/merged_dataset_F1.csv", d3.autoType);
+
+            // Create the Buttons for different Years
+            let myDictionary = {
+                "1950-1963": [],
+                "1964-1977": [],
+                "1978-1991": [],
+                "1992-2005": [],
+                "2006-2020": [],
+                "All Years": []
+            };
+
+            function assignDataToRanges(data, ranges) {
+                data.forEach(v => {
+                    for (let range in ranges) {
+                        if (range != "All Years") {
                             const [startYear, endYear] = range.split("-");
                             if (v.Year >= parseInt(startYear) && v.Year <= parseInt(endYear)) {
                                 ranges[range].push(v);
                             }
                         }
-                    });
-                }
-
-                //assignDataToRanges(championData, myDictionary);
-
-                //console.log(myDictionary);
-
-                <!-- // Buttons and Interactivity
-                const all_given_keys = Object.keys(myDictionary).sort()
-                console.log(all_given_keys)
-
-                all_given_keys.forEach(d => {
-                    d3.select("div#buttons-bar")
-                        .append("button")
-                        .text(d)
-                        .on("click", function () {
-                            updateGraphsAnimated(championData[d])
-                        })
-                }) -->
-
+                        else {
+                            ranges[range].push(v);
+                        }
+                    }
+                });
             };
-
-
-            loadData();
-            //updateGraphsAnimated("1950-1963");
-
-
+            assignDataToRanges(championData2, myDictionary);
             //New: Interactive Bar Chart
-            const svg_bar = d3.select("svg#barchart");
-            const width_bar = svg_bar.attr("width");
-            const height_bar = svg_bar.attr("height");
-            const margin_bar = { top: 10, right: 10, bottom: 50, left: 50 };
-            const chartWidth_bar = width_bar - margin_bar.left - margin_bar.right;
-            const chartHeight_bar = height_bar - margin_bar.top - margin_bar.bottom;
+            var svg_bar = d3.select("svg#barchart");
+            var width_bar = svg_bar.attr("width");
+            var height_bar = svg_bar.attr("height");
+            var margin_bar = { top: 10, right: 10, bottom: 50, left: 50 };
+            var chartWidth_bar = width_bar - margin_bar.left - margin_bar.right;
+            var chartHeight_bar = height_bar - margin_bar.top - margin_bar.bottom;
 
             let annotations = svg_bar.append("g").attr("id", "annotations");
             let chartArea = svg_bar.append("g").attr("id", "points")
                 .attr("transform", `translate(${margin_bar.left},${margin_bar.top})`);
 
-            // Import some JSON data
-            d3.json("data/championships_by_nationality.json", d3.autoType)
-                .then((mergedData) => {
+            const percentScale = d3.scaleLinear().domain([0, 1]).range([chartHeight_bar, 0]);
+            let leftAxis = d3.axisLeft(percentScale).tickFormat(d3.format('.0%'));
+            let leftGridlines = d3.axisLeft(percentScale)
+                .tickSize(-chartWidth_bar - 10)
+                .tickFormat("")
+            annotations.append("g")
+                .attr("class", "y axis")
+                .attr("transform", `translate(${margin_bar.left - 10},${margin_bar.top})`)
+                .call(leftAxis)
+            annotations.append("g")
+                .attr("class", "y gridlines")
+                .attr("transform", `translate(${margin_bar.left - 10},${margin_bar.top})`)
+                .call(leftGridlines)
 
-                    console.log("Inside data");
-                    console.log(mergedData);
-
-
-                    const percentScale = d3.scaleLinear().domain([0, 1]).range([chartHeight_bar, 0]);
-                    let leftAxis = d3.axisLeft(percentScale).tickFormat(d3.format('.0%'));
-                    let leftGridlines = d3.axisLeft(percentScale)
-                        .tickSize(-chartWidth_bar - 10)
-                        .tickFormat("")
-                    annotations.append("g")
-                        .attr("class", "y axis")
-                        .attr("transform", `translate(${margin_bar.left - 10},${margin_bar.top})`)
-                        .call(leftAxis)
-                    annotations.append("g")
-                        .attr("class", "y gridlines")
-                        .attr("transform", `translate(${margin_bar.left - 10},${margin_bar.top})`)
-                        .call(leftGridlines)
-
-                    // The x axis is going to be changing because genres change - we need to store and adjust it
-                    // We leave xAxis as a blank axis for now, but keep the reference outside of the function so we can rewrite it
-                    let bottomAxis = d3.axisBottom()
-                    let bottomAxisG = annotations.append("g")
-                        .attr("class", "x axis")
-                        .attr("transform", `translate(${margin_bar.left},${chartHeight_bar + margin_bar.top + 10})`)
+            // The x axis is going to be changing because genres change - we need to store and adjust it
+            // We leave xAxis as a blank axis for now, but keep the reference outside of the function so we can rewrite it
 
 
-                    function updateBarsAnimated(yearKey) {
+            let bottomAxis = d3.axisBottom();
+            let bottomAxisG = annotations.append("g")
+                .attr("class", "x axis")
+                .attr("transform", `translate(${margin_bar.left},${chartHeight_bar + margin_bar.top + 10})`);
 
-                        const data = mergedData[yearKey]
-                        console.log(data)
 
-                        const genres = d3.map(data, d => d.Nationality)
-                        const genreScale = d3.scaleBand().domain(genres).range([0, chartWidth_bar])
-                            .padding(0.05);
+            function updateBarsAnimated(yearKey) {
 
-                        // Update and animate axes
-                        bottomAxis.scale(genreScale)
-                        bottomAxisG.transition().call(bottomAxis);
+                const data = yearKey;
+                console.log(data);
 
-                        chartArea.selectAll('rect.bar').data(data, d => d['Nationality'])
-                            .join(enter => enter.append('rect')
-                                .attr('class', 'bar')
+                const genres = d3.map(data, d => d.Nationality);
+                const genreScale = d3.scaleBand().domain(genres).range([0, chartWidth_bar])
+                    .padding(0.05);
+
+                // Update and animate axes
+                bottomAxis.scale(genreScale)
+                bottomAxisG.transition().call(bottomAxis);
+
+                chartArea.selectAll('rect.bar')
+                    .data(data)
+                    .join(enter => enter.append('rect')
+                        .attr('class', 'bar')
+                        .attr("fill", "#E10500")
+                        .attr("x", d => genreScale(d.Nationality))
+                        .attr("y", d => percentScale(d.Win_Rate))
+                        .attr("height", d => percentScale(0) - percentScale(d.Win_Rate))
+                        .attr("width", genreScale.bandwidth())
+                        .attr("opacity", 0) // Set opacity low, then animate to 1 to make them fade in
+                        .call(enter => enter.transition()
+                            .attr('opacity', 1)),
+                        update => update.call(update => update.transition()  // Animate resizing and movement
+                            .attr("fill", "#E10500")
+                            .attr("x", d => genreScale(d.Nationality))
+                            .attr("y", d => percentScale(d.Win_Rate))
+                            .attr("height", d => percentScale(0) - percentScale(d.Win_Rate))
+                            .attr("width", genreScale.bandwidth())),
+                        exit => exit.call(exit => exit.transition().attr('opacity', 0).remove())); // Animate opacity to fade out
+            };
+
+
+
+            // Years Active
+
+            var svg_bar_yr = d3.select("svg#barchart_year_active");
+            var width_bar_yr = svg_bar_yr.attr("width");
+            var height_bar_yr = svg_bar_yr.attr("height");
+            var chartWidth_bar_yr = width_bar_yr - margin_bar.left - margin_bar.right;
+            var chartHeight_bar_yr = height_bar_yr - margin_bar.top - margin_bar.bottom;
+
+            // Group for chart elements
+            var annotations_yr = svg_bar_yr.append("g").attr("id", "annotations_yr");
+            var chartArea_yr = svg_bar_yr.append("g").attr("id", "points_yr")
+                .attr("transform", `translate(${margin_bar.left},${margin_bar.top})`);
+
+            var xScale = d3.scaleLinear()
+                .domain([0, 20])
+                .range([0, chartWidth_bar_yr]);
+            // Axes groups
+            var yScale = d3.scaleLinear()
+                .domain([0, 20])
+                .range([chartHeight_bar_yr, 0]);
+
+            let bottomAxis_yr = d3.axisBottom(xScale);
+            let bottomAxisG_yr = annotations_yr.append("g")
+                .attr("class", "x axis")
+                .attr("transform", `translate(${margin_bar.left},${chartHeight_bar_yr + margin_bar.top + 10})`)
+                .call(bottomAxis_yr);
+
+            let leftAxis_yr = d3.axisLeft(yScale);
+            let leftAxisG_yr = annotations_yr.append("g")
+                .attr("class", "y axis")
+                .attr("transform", `translate(${margin_bar.left - 10},${margin_bar.top})`)
+                .call(leftAxis_yr);
+
+            let yGridlines_yr = d3.axisLeft(yScale)
+                .tickSize(-chartWidth_bar_yr)
+                .tickFormat("");
+
+            annotations_yr.append("g")
+                .attr("class", "y gridlines")
+                .attr("transform", `translate(${margin_bar.left - 10},${margin_bar.top})`)
+                .call(yGridlines_yr);
+
+            // x-axis text
+            annotations_yr.append("text")
+                .attr("class", "x axis-label")
+                .attr("text-anchor", "middle")
+                .attr("x", margin_bar.left + chartWidth_bar_yr / 2)
+                .attr("y", chartHeight_bar_yr + margin_bar.top + 50)
+                .text("Years Active");
+
+            // y-axis text
+            annotations_yr.append("text")
+                .attr("class", "y axis-label")
+                .attr("text-anchor", "middle")
+                .attr("x", -chartHeight_bar_yr / 2)
+                .attr("y", margin_bar.left - 34)
+                .attr("transform", "rotate(-90)")
+                .text("Frequency");
+
+            function updateBarsAnimatedYearActive(yearKey) {
+                const data = yearKey;
+
+                xScale.domain([0, d3.max(data, d => d.Years_Active)]);  // changing the domain based on the frequency on x-axis
+                const histogram = d3.histogram()
+                    .value(d => d.Years_Active)
+                    .domain(xScale.domain())
+                    .thresholds(xScale.ticks(Math.sqrt(data.length)));
+
+                var bins = histogram(data);
+
+                yScale.domain([0, d3.max(bins, d => d.length)]);  // Max frequency of any bin
+
+                bottomAxisG_yr.transition().duration(500).call(bottomAxis_yr);
+                leftAxisG_yr.transition().duration(500).call(leftAxis_yr);
+
+                console.log(bins);
+                chartArea_yr.selectAll('rect.bar')
+                    .data(bins) // Update data with bins
+                    .join(
+                        enter => enter.append('rect')
+                            .attr('class', 'bar')
+                            .attr("fill", "#FECA33")
+                            .attr("x", d => xScale(d.x0))
+                            .attr("y", chartHeight_bar_yr) // Start from the bottom of the chartHeight
+                            .attr("width", d => Math.max(0, xScale(d.x1) - xScale(d.x0) - 1)) // setting bar width based on bin range
+                            .attr("height", 0)
+                            .attr("opacity", 0)
+                            .call(enter => enter.transition()
+                                .attr("y", d => yScale(d.length))
+                                .attr("height", d => chartHeight_bar_yr - yScale(d.length))
+                                .attr('opacity', 1)),
+                        update => update.call(update => update.transition()  // Resizing and movement of the Bars!
+                            .duration(500)
+                            .attr("x", d => xScale(d.x0))
+                            .attr("y", d => yScale(d.length))
+                            .attr("width", d => Math.max(0, xScale(d.x1) - xScale(d.x0) - 1))
+                            .attr("height", d => chartHeight_bar_yr - yScale(d.length)) // based on number of elements!
+                        ),
+                        exit => exit.call(exit => exit.transition().attr('opacity', 0).remove())
+                    );
+            };
+
+
+
+            // Fastest Lap Rate
+            var svg_fast_lap = d3.select("svg#barchart_fast_lap");
+            var width_bar_lap = svg_fast_lap.attr("width");
+            var height_bar_lap = svg_fast_lap.attr("height");
+            var chartWidth_bar_lap = width_bar_lap - margin_bar.left - margin_bar.right;
+            var chartHeight_bar_lap = height_bar_lap - margin_bar.top - margin_bar.bottom;
+
+            let annotations_lap = svg_fast_lap.append("g").attr("id", "annotations_lap");
+            let chartArea_lap = svg_fast_lap.append("g").attr("id", "points_lap")
+                .attr("transform", `translate(${margin_bar.left},${margin_bar.top})`);
+
+            const percentScale_lap = d3.scaleLinear().domain([0, 1]).range([chartHeight_bar_lap, 0]);
+            let leftAxis_lap = d3.axisLeft(percentScale_lap).tickFormat(d3.format('.0%'));
+            let leftGridlines_lap = d3.axisLeft(percentScale_lap)
+                .tickSize(-chartWidth_bar_lap - 10)
+                .tickFormat("");
+            annotations_lap.append("g")
+                .attr("class", "y axis")
+                .attr("transform", `translate(${margin_bar.left - 10},${margin_bar.top})`)
+                .call(leftAxis_lap);
+            annotations_lap.append("g")
+                .attr("class", "y gridlines")
+                .attr("transform", `translate(${margin_bar.left - 10},${margin_bar.top})`)
+                .call(leftGridlines_lap);
+
+            let genreScale_lap = d3.scaleBand().range([0, chartWidth_bar_lap]);
+            let bottomAxis_lap = d3.axisBottom(genreScale_lap);
+            let bottomAxisG_lap = annotations_lap.append("g")
+                .attr("class", "x axis")
+                .attr("transform", `translate(${margin_bar.left},${chartHeight_bar_lap + margin_bar.top + 10})`)
+                .call(bottomAxis_lap);
+
+            // x-axis text
+            annotations_lap.append("text")
+                .attr("class", "x axis-label")
+                .attr("text-anchor", "middle")
+                .attr("x", margin_bar.left + chartWidth_bar_lap / 2)
+                .attr("y", chartHeight_bar_lap + margin_bar.top + 50)
+                .text("Nation");
+
+            // y-axis text
+            annotations_lap.append("text")
+                .attr("class", "y axis-label")
+                .attr("text-anchor", "middle")
+                .attr("x", -chartHeight_bar_lap / 2)
+                .attr("y", margin_bar.left - 40)
+                .attr("transform", "rotate(-90)")
+                .text("Fastest Rate (%)");
+
+            function updateBarsAnimatedLap(yearKey) {
+
+                const data = yearKey;
+
+                const genres_lap = d3.map(data, d => d.Nationality);
+                const genreScale_lap = d3.scaleBand().domain(genres_lap).range([0, chartWidth_bar_lap]);
+
+                // Update and animate axis!
+                bottomAxis_lap.scale(genreScale_lap)
+                bottomAxisG_lap.transition().call(bottomAxis_lap);
+
+                chartArea_lap.selectAll('rect.bar')
+                    .data(data)
+                    .join(enter => enter.append('rect')
+                        .attr('class', 'bar')
+                        .attr("fill", "#F37B1F")
+                        .attr("x", d => genreScale_lap(d.Nationality))
+                        .attr("y", d => percentScale_lap(d.FastLap_Rate))
+                        .attr("height", 0)
+                        .attr("width", genreScale_lap.bandwidth())
+                        .call(enter => enter.transition()
+                            .attr("y", d => percentScale_lap(d.FastLap_Rate))
+                            .attr("height", d => percentScale_lap(0) - percentScale_lap(d.FastLap_Rate))),
+                        update => update.call(update => update.transition()
+                            .attr("x", d => genreScale_lap(d.Nationality))
+                            .attr("y", d => percentScale_lap(d.FastLap_Rate))
+                            .attr("height", d => percentScale_lap(0) - percentScale_lap(d.FastLap_Rate))
+                            .attr("width", genreScale_lap.bandwidth())),
+                        exit => exit.call(exit => exit.transition().attr('opacity', 0).remove())
+                    );
+            };
+
+
+            //Old buttons
+            // Buttons and Interactivity
+            // const all_given_keys = Object.keys(myDictionary).sort()
+            // all_given_keys.forEach(d => {
+            //     d3.select("div#buttons-bar")
+            //         .append("button")
+            //         .text(d)
+            //         .on("click", function () {
+            //             updateBarsAnimated(myDictionary[d]);
+            //             updateBarsAnimatedYearActive(myDictionary[d]);
+            //             updateBarsAnimatedLap(myDictionary[d]);
+            //         })
+            // })
+
+
+            //New buttons
+            //making each of the buttons map to an image so our page looks more visually appealing
+            const imagePaths = {
+                "1950-1963": "images/ferrari.png",
+                "1964-1977": "images/mercedes.png",
+                "1978-1991": "images/kick-sauber.png",
+                "1992-2005": "images/mclaren.png",
+                "2006-2020": "images/red-bull-racing.png",
+                "All Years": "images/haas.png"
+            };
+            //images taken from F1 website - CITE: (https://www.formula1.com/en/teams)
+
+            const buttonsBar = d3.select("#buttons-bar");
+
+            Object.keys(imagePaths).forEach(yearRange => {
+                //making one button for each image
+                const button = buttonsBar.append("button")
+                    .on("click", function () {
+                        updateBarsAnimated(myDictionary[yearRange]);
+                        updateBarsAnimatedYearActive(myDictionary[yearRange]);
+                        updateBarsAnimatedLap(myDictionary[yearRange]);
+                    });
+
+                //putting the image into each button
+                button.append("img")
+                    .attr("src", imagePaths[yearRange])
+
+                //putting the year range below the image so that it still has meaning to users for the time frame
+                button.append("div").text(yearRange);
+            });
+
+
+
+
+
+
+
+
+
+
+            console.log(myDictionary);
+            updateBarsAnimated(myDictionary["All Years"]);
+            updateBarsAnimatedYearActive(myDictionary["All Years"]);
+            updateBarsAnimatedLap(myDictionary["All Years"])
+        };
+        loadData();
+
+
+
+
+
+
+
+
+
+
+
+
+
+        //Hung Ming: commented out
+        //New: Interactive Bar Chart
+        /*
+        const svg_bar = d3.select("svg#barchart");
+        const width_bar = svg_bar.attr("width");
+        const height_bar = svg_bar.attr("height");
+        const margin_bar = { top: 10, right: 10, bottom: 50, left: 50 };
+        const chartWidth_bar = width_bar - margin_bar.left - margin_bar.right;
+        const chartHeight_bar = height_bar - margin_bar.top - margin_bar.bottom;
+
+        let annotations = svg_bar.append("g").attr("id", "annotations");
+        let chartArea = svg_bar.append("g").attr("id", "points")
+            .attr("transform", `translate(${margin_bar.left},${margin_bar.top})`);
+
+        // Import some JSON data
+        d3.json("data/championships_by_nationality.json", d3.autoType)
+            .then((mergedData) => {
+
+                console.log("Inside data");
+                console.log(mergedData);
+
+
+                const percentScale = d3.scaleLinear().domain([0, 1]).range([chartHeight_bar, 0]);
+                let leftAxis = d3.axisLeft(percentScale).tickFormat(d3.format('.0%'));
+                let leftGridlines = d3.axisLeft(percentScale)
+                    .tickSize(-chartWidth_bar - 10)
+                    .tickFormat("")
+                annotations.append("g")
+                    .attr("class", "y axis")
+                    .attr("transform", `translate(${margin_bar.left - 10},${margin_bar.top})`)
+                    .call(leftAxis)
+                annotations.append("g")
+                    .attr("class", "y gridlines")
+                    .attr("transform", `translate(${margin_bar.left - 10},${margin_bar.top})`)
+                    .call(leftGridlines)
+
+                // The x axis is going to be changing because genres change - we need to store and adjust it
+                // We leave xAxis as a blank axis for now, but keep the reference outside of the function so we can rewrite it
+                let bottomAxis = d3.axisBottom()
+                let bottomAxisG = annotations.append("g")
+                    .attr("class", "x axis")
+                    .attr("transform", `translate(${margin_bar.left},${chartHeight_bar + margin_bar.top + 10})`)
+
+
+                function updateBarsAnimated(yearKey) {
+
+                    const data = mergedData[yearKey]
+                    console.log(data)
+
+                    const genres = d3.map(data, d => d.Nationality)
+                    const genreScale = d3.scaleBand().domain(genres).range([0, chartWidth_bar])
+                        .padding(0.05);
+
+                    // Update and animate axes
+                    bottomAxis.scale(genreScale)
+                    bottomAxisG.transition().call(bottomAxis);
+
+                    chartArea.selectAll('rect.bar').data(data, d => d['Nationality'])
+                        .join(enter => enter.append('rect')
+                            .attr('class', 'bar')
+                            .attr("fill", "#E10500")
+                            .attr("x", d => genreScale(d.Nationality))
+                            .attr("y", d => percentScale(d.Percentage))
+                            .attr("height", d => percentScale(0) - percentScale(d.Percentage))
+                            .attr("width", genreScale.bandwidth())
+                            .attr("opacity", 0) // Set opacity low, then animate to 1 to make them fade in
+                            .call(enter => enter.transition()
+                                .attr('opacity', 1)),
+                            update => update.call(update => update.transition()  // Animate resizing and movement
                                 .attr("fill", "#E10500")
                                 .attr("x", d => genreScale(d.Nationality))
                                 .attr("y", d => percentScale(d.Percentage))
                                 .attr("height", d => percentScale(0) - percentScale(d.Percentage))
-                                .attr("width", genreScale.bandwidth())
-                                .attr("opacity", 0) // Set opacity low, then animate to 1 to make them fade in
-                                .call(enter => enter.transition()
-                                    .attr('opacity', 1)),
-                                update => update.call(update => update.transition()  // Animate resizing and movement
-                                    .attr("fill", "#E10500")
-                                    .attr("x", d => genreScale(d.Nationality))
-                                    .attr("y", d => percentScale(d.Percentage))
-                                    .attr("height", d => percentScale(0) - percentScale(d.Percentage))
-                                    .attr("width", genreScale.bandwidth())),
-                                exit => exit.call(exit => exit.transition().attr('opacity', 0).remove())); // Animate opacity to fade out
+                                .attr("width", genreScale.bandwidth())),
+                            exit => exit.call(exit => exit.transition().attr('opacity', 0).remove())); // Animate opacity to fade out
 
-                    }
+                }
 
-                    //Old buttons deleted
+                //Old buttons deleted
 
 
-                    //New buttons
-                    //making each of the buttons map to an image so our page looks more visually appealing
-                    const imagePaths = {
-                        "1950-1963": "images/ferrari.png",
-                        "1964-1977": "images/mercedes.png",
-                        "1978-1991": "images/kick-sauber.png",
-                        "1992-2005": "images/mclaren.png",
-                        "2006-2020": "images/red-bull-racing.png",
-                        "All Years": "images/haas.png"
-                    };
-                    //images taken from F1 website - CITE: (https://www.formula1.com/en/teams)
+                //New buttons
+                //making each of the buttons map to an image so our page looks more visually appealing
+                const imagePaths = {
+                    "1950-1963": "images/ferrari.png",
+                    "1964-1977": "images/mercedes.png",
+                    "1978-1991": "images/kick-sauber.png",
+                    "1992-2005": "images/mclaren.png",
+                    "2006-2020": "images/red-bull-racing.png",
+                    "All Years": "images/haas.png"
+                };
+                //images taken from F1 website - CITE: (https://www.formula1.com/en/teams)
 
-                    const buttonsBar = d3.select("#buttons-bar");
+                const buttonsBar = d3.select("#buttons-bar");
 
-                    Object.keys(imagePaths).forEach(yearRange => {
-                        //making one button for each image
-                        const button = buttonsBar.append("button")
-                            .on("click", function () {
-                                updateBarsAnimated(yearRange);
-                            });
+                Object.keys(imagePaths).forEach(yearRange => {
+                    //making one button for each image
+                    const button = buttonsBar.append("button")
+                        .on("click", function () {
+                            updateBarsAnimated(yearRange);
+                        });
 
-                        //putting the image into each button
-                        button.append("img")
-                            .attr("src", imagePaths[yearRange])
+                    //putting the image into each button
+                    button.append("img")
+                        .attr("src", imagePaths[yearRange])
 
-                        //putting the year range below the image so that it still has meaning to users for the time frame
-                        button.append("div").text(yearRange);
-                    });
-
-
-
-
-                    // We do not want to start with a blank screen, so call it once
-                    updateBarsAnimated("All Years");
-
-
+                    //putting the year range below the image so that it still has meaning to users for the time frame
+                    button.append("div").text(yearRange);
                 });
 
 
 
 
+                // We do not want to start with a blank screen, so call it once
+                updateBarsAnimated("All Years");
+
+
+            });
+            */
 
 
 
 
-        </script>
+
+
+
+
+    </script>
 </body>
 
 </html>
